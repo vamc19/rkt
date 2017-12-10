@@ -19,8 +19,11 @@ import (
 	"net/url"
 	"path"
 	"strings"
+	"os"
 
 	d2acommon "github.com/appc/docker2aci/lib/common"
+	"github.com/appc/docker2aci/lib"
+	"path/filepath"
 )
 
 const (
@@ -87,6 +90,32 @@ func NewDockerFromString(ds string) (Distribution, error) {
 	}
 	return NewDocker(u)
 }
+
+// NewDockerFromTarball creates a new docker distribution from the provided
+// path to the tarball
+func NewDockerFromTarball(path string) (Distribution, error) {
+	cfg := docker2aci.CommonConfig{
+		Squash:      true,
+		OutputDir:   ".",
+		TmpDir:      os.TempDir(),
+		Compression: d2acommon.NoCompression,
+	}
+
+	fileConfig := docker2aci.FileConfig{
+		CommonConfig: cfg,
+		DockerURL: "",
+	}
+
+	aciLayerPaths, err := docker2aci.ConvertSavedFile(path, fileConfig)
+	if err != nil {
+		return nil, fmt.Errorf("error converting docker image to ACI: %v", err)
+	}
+
+	absAciPath, _ := filepath.Abs(aciLayerPaths[0])
+	aciUrl, _ := url.Parse("file://" + absAciPath)
+	return NewACIArchiveFromTransportURL(aciUrl)
+}
+
 
 func (d *Docker) CIMD() *url.URL {
 	uriStr := NewCIMDString(TypeDocker, distDockerVersion, d.url)

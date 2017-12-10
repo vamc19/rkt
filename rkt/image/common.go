@@ -187,6 +187,20 @@ func DistFromImageString(is string) (dist.Distribution, error) {
 			return nil, fmt.Errorf("docker distribution creation error: %v", err)
 		}
 		return dist, nil
+	case "docker-image":
+		// Accept both docker-image: and docker-image://uri
+		dockerTarPath := is
+		if strings.HasPrefix(dockerTarPath, "docker-image://") {
+			dockerTarPath = strings.TrimPrefix(dockerTarPath, "docker-image://")
+		} else if strings.HasPrefix(dockerTarPath, "docker-image:") {
+			dockerTarPath = strings.TrimPrefix(dockerTarPath, "docker-image:")
+		}
+
+		dist, err := dist.NewDockerFromTarball(dockerTarPath)
+		if err != nil {
+			return nil, fmt.Errorf("docker distribution creation error: %v", err)
+		}
+		return dist, err
 	case dist.Scheme: // cimd
 		return dist.Parse(is)
 	default:
