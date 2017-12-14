@@ -28,7 +28,7 @@ import (
 )
 
 // StopPod stops the given pod.
-func StopPod(dir string, force bool, uuid *types.UUID) error {
+func StopPod(dir string, force bool, checkpoint bool, checkpointDir string ,uuid *types.UUID) error {
 	s1rootfs := common.Stage1RootfsPath(dir)
 
 	if err := os.Chdir(dir); err != nil {
@@ -44,6 +44,11 @@ func StopPod(dir string, force bool, uuid *types.UUID) error {
 
 	if force {
 		args = append(args, "--force")
+	}
+
+	if checkpoint {
+		args = append(args, "--checkpoint")
+		args = append(args, "--checkpoint-dir", checkpointDir)
 	}
 
 	args = append(args, uuid.String())

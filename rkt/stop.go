@@ -32,12 +32,16 @@ var (
 		Run:   runWrapper(runStop),
 	}
 	flagForce bool
+	flagCheckpoint bool
+	flagCheckpointDir string
 )
 
 func init() {
 	cmdRkt.AddCommand(cmdStop)
 	cmdStop.Flags().BoolVar(&flagForce, "force", false, "forced stopping")
+	cmdStop.Flags().BoolVar(&flagCheckpoint, "checkpoint", false, "create checkpoint")
 	cmdStop.Flags().StringVar(&flagUUIDFile, "uuid-file", "", "read pod UUID from file instead of argument")
+	cmdStop.Flags().StringVar(&flagCheckpointDir, "checkpoint-dir", "", "dump checkpoint images to directory")
 }
 
 func runStop(cmd *cobra.Command, args []string) (exit int) {
@@ -83,7 +87,7 @@ func runStop(cmd *cobra.Command, args []string) (exit int) {
 			continue
 		}
 
-		if err := stage0.StopPod(p.Path(), flagForce, p.UUID); err == nil {
+		if err := stage0.StopPod(p.Path(), flagForce, flagCheckpoint, flagCheckpointDir, p.UUID); err == nil {
 			stdout.Printf("%q", p.UUID)
 		} else {
 			stderr.PrintE(fmt.Sprintf("error stopping %q", p.UUID), err)
