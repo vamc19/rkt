@@ -22,14 +22,20 @@ import (
 	"io/ioutil"
 	"os"
 	"syscall"
+	"strconv"
+	"os/exec"
 )
 
 var (
 	force bool
+	checkpoint bool
+	checkpointDir string
 )
 
 func init() {
 	flag.BoolVar(&force, "force", false, "Forced stopping")
+	flag.BoolVar(&checkpoint, "checkpoint", false, "Create checkpoint")
+	flag.StringVar(&checkpointDir, "checkpoint-dir", "", "Dump checkpoint images to folder")
 }
 
 func readIntFromFile(path string) (i int, err error) {
@@ -41,24 +47,9 @@ func readIntFromFile(path string) (i int, err error) {
 	return
 }
 
-func main() {
-	flag.Parse()
-	var sig syscall.Signal
-
-	if force {
-		sig = syscall.SIGKILL
-	} else {
-		sig = syscall.SIGTERM
-	}
-
-	pid, err := readIntFromFile("pid")
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "error reading pid: %v\n", err)
-		os.Exit(254)
-	}
-
+func stopProcess(pid int, sig syscall.Signal) {
 	// check for process existence, then kill the process otherwise the group
-	err = syscall.Kill(pid, syscall.Signal(0))
+	err := syscall.Kill(pid, syscall.Signal(0))
 	if err == nil {
 		err = syscall.Kill(pid, sig)
 		if err != nil {
@@ -77,4 +68,53 @@ func main() {
 			os.Exit(254)
 		}
 	}
+}
+
+func checkpointProcess(pid int, dir string) {
+
+	// Checkpoint directory is not specified. Create one in stage1 directory.
+	if dir == "" {
+		dir = "checkpoint"
+		os.Mkdir("checkpoint", 0655)  // check error
+	}
+
+	// TODO: Check if dir exits. Create if not.
+
+	// check for process existence, then checkpoint the process.
+	err := syscall.Kill(pid, syscall.Signal(0))
+	if err == nil {
+		// create checkpoint
+		cmd := "criu"
+		args := []string{"dump", "-t", strconv.Itoa(pid), "--shell-job", "--images-dir", dir}
+
+		err = exec.Command(cmd, args...).Run()
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "error creating checkpoint: %v\n", err)
+			os.Exit(1)
+		}
+
+	}
+}
+
+func main() {
+	flag.Parse()
+	var sig syscall.Signal
+
+	if force {
+		sig = syscall.SIGKILL
+	} else {
+		sig = syscall.SIGTERM
+	}
+
+	pid, err := readIntFromFile("pid")
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "error reading pid: %v\n", err)
+		os.Exit(254)
+	}
+
+	if checkpoint {
+		checkpointProcess(pid, checkpointDir)
+	}
+
+	stopProcess(pid, sig)
 }
