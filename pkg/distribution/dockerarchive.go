@@ -43,7 +43,7 @@ type DockerArchive struct {
 	fileURL string   // the local path of the target docker archive, i.e. file://path/to/file.tar
 }
 
-// NewDockerArchive creates a new docker distribution from the provided distribution uri string
+// NewDockerArchive creates a new docker-archive distribution from the provided uri string
 func NewDockerArchive(u *url.URL) (Distribution, error) {
 	dp, err := parseCIMD(u)
 	if err != nil {
@@ -64,7 +64,7 @@ func NewDockerArchive(u *url.URL) (Distribution, error) {
 	}, nil
 }
 
-// NewDockerArchiveFromString creates a new docker distribution from the provided
+// NewDockerArchiveFromString creates a new docker-archive distribution from the provided
 // tarball path (like "some/path/to/busybox.tar" etc...)
 func NewDockerArchiveFromString(ds string) (Distribution, error) {
 	urlStr := NewCIMDString(TypeDockerArchive, distDockerArchiveVersion, url.QueryEscape(ds))
